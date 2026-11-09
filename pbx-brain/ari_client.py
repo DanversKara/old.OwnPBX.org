@@ -7,6 +7,7 @@ the PyPI/GitHub ari-py packages are Python-2-only and unmaintained.
 """
 import json
 import logging
+import time
 
 import requests
 import websocket
@@ -204,17 +205,34 @@ class ARIClient:
             except Exception:
                 log.exception("event handler failed for %s", etype)
 
-    def run(self, app):
-        ws_url = (self.base.replace("https://", "wss://")
-                  .replace("http://", "ws://")
-                  + "events?app=%s&api_key=%s:%s"
-                  % (app, self.auth[0], self.auth[1]))
-        log.info("connecting to %s",
-                 ws_url.split("api_key")[0] + "api_key=***")
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_message=lambda ws, msg: self._dispatch(msg),
-            on_error=lambda ws, err: log.error("ws error: %s", err),
-            on_close=lambda ws, *a: log.warning("ws closed"),
-            on_open=lambda ws: log.info("event stream open"))
-        ws.run_forever()
+    def run(self, app, ping_interval=30, ping_timeout=10):
+        """Consume the ARI event stream forever, reconnecting when it ends.
+
+        The old code called run_forever() once with no ping: if the socket
+        died silently (half-open TCP, no close frame), run_forever() blocked
+        forever, the process stayed alive, the status server kept answering,
+        and no call event ever arrived again — inbound dead, nothing in the
+        logs. That is the Nov 1 and Nov 8 inbound outage. The ping makes a
+        dead socket detectable (an unanswered ping closes it), and the loop
+        brings the stream back. A fresh connection re-subscribes to the app,
+        so no state needs rebuilding. Backoff is 1s doubling to a 30s cap.
+        """
+        delay = 1
+        while True:
+            ws_url = (self.base.replace("https://", "wss://")
+                      .replace("http://", "ws://")
+                      + "events?app=%s&api_key=%s:%s"
+                      % (app, self.auth[0], self.auth[1]))
+            log.info("connecting to %s",
+                     ws_url.split("api_key")[0] + "api_key=***")
+            ws = websocket.WebSocketApp(
+                ws_url,
+                on_message=lambda ws, msg: self._dispatch(msg),
+                on_error=lambda ws, err: log.error("ws error: %s", err),
+                on_close=lambda ws, *a: log.warning("ws closed"),
+                on_open=lambda ws: log.info("event stream open"))
+            ws.run_forever(ping_interval=ping_interval,
+                           ping_timeout=ping_timeout)
+            log.warning("event stream ended; reconnecting in %ss", delay)
+            time.sleep(delay)
+            delay = min(delay * 2, 30)
