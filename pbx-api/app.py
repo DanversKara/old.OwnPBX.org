@@ -666,9 +666,50 @@ SECURITY_HEADERS = {
 }
 
 
+# portal/my split (ownpbx.org): portal.ownpbx.org is the sign-in page and
+# my.ownpbx.org is the signed-in dashboard. On *.ownpbx.org the session
+# cookie is shared across subdomains and sign-ins land on my; on any other
+# host (self-hosted servers) everything behaves exactly as before.
+OWNPBX_SUFFIX = ".ownpbx.org"
+MY_HOST = "my.ownpbx.org"
+PORTAL_LOGIN = "https://portal.ownpbx.org/login"
+# Paths that must keep working on my.ownpbx.org without a session: the OIDC
+# callback, public pages, webhooks, and the app API (token auth, not cookie).
+MY_PUBLIC_PREFIXES = (
+    "/login/oidc/callback", "/invite/", "/store", "/stripe/webhook",
+    "/api/", "/hooks/", "/healthz", "/favicon", "/mms/", "/data-export/",
+)
+
+
+def _req_host(request: Request) -> str:
+    """Request host, lowercased, without port and without a Cloudflare
+    Worker's private "origin-" prefix."""
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host.startswith("origin-"):
+        host = host[len("origin-"):]
+    return host
+
+
+def _is_ownpbx_host(request: Request) -> bool:
+    host = _req_host(request)
+    return host == "ownpbx.org" or host.endswith(OWNPBX_SUFFIX)
+
+
+def _dashboard_base(request: Request) -> str:
+    """Base URL of the signed-in dashboard: my.ownpbx.org on the service,
+    '' (same host, relative URLs) everywhere else."""
+    return "https://my.ownpbx.org" if _is_ownpbx_host(request) else ""
+
+
 @app.middleware("http")
 async def _remote_guard(request: Request, call_next):
     _login_peer.set(request.client.host if request.client else "?")
+    # portal/my split: a visitor on my.ownpbx.org without a session is sent
+    # to portal.ownpbx.org to sign in; a signed-in visitor stays on my.
+    if _req_host(request) == MY_HOST and not request.url.path.startswith(MY_PUBLIC_PREFIXES):
+        if not _sess(request):
+            qs = request.url.query
+            return RedirectResponse(PORTAL_LOGIN + ("?" + qs if qs else ""), status_code=302)
     blocked = is_remote(request) and _get_setting("admin_remote") != "1"
     HIDE_ADMIN.set(blocked)
     _load_branding()
@@ -705,8 +746,12 @@ async def _security_headers(request: Request, call_next):
 
 
 def _set_session_cookie(request: Request, resp, tok: str):
+    # On *.ownpbx.org the cookie is shared across subdomains (portal sign-in
+    # stays signed in on my); elsewhere it stays host-only, as before.
+    domain = OWNPBX_SUFFIX if _is_ownpbx_host(request) else None
     resp.set_cookie("pbx_session", tok, httponly=True, samesite="lax",
-                    secure=is_https(request), max_age=12 * 3600)
+                    secure=is_https(request), max_age=12 * 3600,
+                    domain=domain)
 
 
 # Login throttling (in memory; resets on restart):
@@ -838,7 +883,8 @@ def login_post(request: Request, username: str = Form(...), password: str = Form
         return HTMLResponse(page("Login", sso_ui.login_box(request, "Invalid credentials", True, next)), status_code=401)
     _log_signin(request, username, True)
     tok = _new_session(u)
-    dest = sso_ui.next_param(next) or ("/" if u["role"] == "admin" else "/ucp")
+    base = _dashboard_base(request)
+    dest = sso_ui.next_param(next) or (base + ("/" if u["role"] == "admin" else "/ucp"))
     resp = RedirectResponse(dest, status_code=302)
     _set_session_cookie(request, resp, tok)
     return resp
