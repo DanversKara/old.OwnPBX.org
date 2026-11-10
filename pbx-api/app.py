@@ -863,6 +863,12 @@ def _check_csrf_v1(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
+    # Already signed in (e.g. bounced here from my.ownpbx.org)? Go straight
+    # to the dashboard instead of showing a form that will only confuse.
+    s = _sess(request)
+    if s:
+        base = _dashboard_base(request)
+        return RedirectResponse(base + ("/" if s["role"] == "admin" else "/ucp"), status_code=302)
     if sso_ui.should_auto_redirect(request):
         nxt = sso_ui.next_param(request.query_params.get("next"))
         return RedirectResponse("/login/oidc" + ("?" + urllib.parse.urlencode({"next": nxt}) if nxt else ""),
