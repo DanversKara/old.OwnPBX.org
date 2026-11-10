@@ -68,12 +68,23 @@ object Updates {
         return Offer(v, url).takeIf { url.isNotBlank() }
     }
 
+    /** App stores that deliver their own updates (F-Droid and its clients, and older Play installs). */
+    private val STORES = mapOf(
+        "org.fdroid.fdroid" to "F-Droid",
+        "org.fdroid.basic" to "F-Droid",
+        "com.looker.droidify" to "Droid-ify",
+        "com.machiav3lli.fdroid" to "Neo Store",
+        "com.aurora.store" to "Aurora Store",
+        "com.android.vending" to "Google Play",
+    )
+
     /**
-     * True when this install came from Google Play (installer package com.android.vending). An
-     * unknown installer, or a lookup failure, means "not Play": sideloaded installs keep the GitHub
-     * check.
+     * The app store this install came from and that updates it, or null for a GitHub / sideloaded
+     * install (those check GitHub). F-Droid builds (myphone.updateCheck=false) never check GitHub:
+     * F-Droid signs its own builds, so a GitHub .apk couldn't install over them anyway.
      */
-    fun isPlayInstall(ctx: Context): Boolean {
+    fun storeName(ctx: Context): String? {
+        if (!org.ownpbx.BuildConfig.UPDATE_CHECK) return "F-Droid"
         return try {
             val installer =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -82,9 +93,9 @@ object Updates {
                     @Suppress("DEPRECATION")
                     ctx.packageManager.getInstallerPackageName(ctx.packageName)
                 }
-            installer == "com.android.vending"
+            STORES[installer]
         } catch (e: Exception) {
-            false
+            null
         }
     }
 
@@ -93,9 +104,9 @@ object Updates {
      * offer if any. Network and parse errors are swallowed by design.
      */
     suspend fun refresh(ctx: Context, force: Boolean = false): Offer? {
-        // Google Play installs never self-update: Play delivers updates itself, and a
-        // GitHub .apk cannot install over a Play-signed app anyway.
-        if (isPlayInstall(ctx)) return null
+        // Store installs (F-Droid) never self-update: the store delivers updates itself, and a
+        // GitHub .apk cannot install over a store-signed app anyway.
+        if (storeName(ctx) != null) return null
         val store = Store(ctx)
         if (!store.updateCheck) return null
         val now = System.currentTimeMillis()

@@ -64,14 +64,14 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
           echo "MYPHONE_KEYSTORE_FILE=$keystore" >> "$GITHUB_ENV"
 
-      - name: Build the signed release APK and AAB
+      - name: Build the signed release APK
         env:
           MYPHONE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           MYPHONE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           MYPHONE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set +e
-          gradle -p android assembleRelease bundleRelease --no-daemon --console=plain > "$RUNNER_TEMP/build.log" 2>&1
+          gradle -p android assembleRelease --no-daemon --console=plain > "$RUNNER_TEMP/build.log" 2>&1
           code=$?
           set -e
           if [ "$code" -ne 0 ]; then
@@ -92,9 +92,7 @@ jobs:
           for apk in android/app/build/outputs/apk/release/*.apk; do
             cp "$apk" "$out/my-phone-$APP_VERSION.apk"
           done
-          for aab in android/app/build/outputs/bundle/release/*.aab; do
-            cp "$aab" "$out/my-phone-$APP_VERSION.aab"
-          done
+          # Distributed on GitHub (and later F-Droid) only: no Play bundle (.aab).
           # R8 mapping (only present when minify is enabled).
           if [ -f android/app/build/outputs/mapping/release/mapping.txt ]; then
             cp android/app/build/outputs/mapping/release/mapping.txt "$out/my-phone-$APP_VERSION-mapping.txt"
@@ -111,6 +109,8 @@ jobs:
             echo "== $(basename "$apk")"
             "$apksigner" verify --print-certs "$apk"
           done
+          # Checksums so people downloading from GitHub can check the file.
+          (cd "$RUNNER_TEMP/artifacts" && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - name: Publish the GitHub Release
         uses: softprops/action-gh-release@v2

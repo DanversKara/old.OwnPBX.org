@@ -96,7 +96,7 @@ def device_session(row: dict) -> dict:
 
 
 # ---------------------------------------------------------------- app store mode
-# For phones running the app from Google Play (or any store): the app gets no
+# For phones running the app from an app store: the app gets no
 # plan / billing / usage information and no "not in your plan" wording, so it
 # never looks like it sells or upsells anything. Limits still apply the same;
 # what's unavailable is just "not available on this account". Per login

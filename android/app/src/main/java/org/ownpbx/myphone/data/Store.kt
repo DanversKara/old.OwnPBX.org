@@ -271,10 +271,4 @@ class Store(context: Context) {
     }
 }
 
-/** Addresses the PBX moved away from, mapped to where it lives now. */
-private val MOVED = mapOf("myphone.dox.box" to "https://myaccount.ownpbx.org")
-
-private fun moved(server: String): String {
-    val host = server.trim().removePrefix("https://").removePrefix("http://").substringBefore('/').substringBefore(':')
-    return MOVED[host.lowercase()] ?: server
-}
+private fun moved(server: String): String = org.ownpbx.myphone.data.Api.movedServer(server) ?: server
