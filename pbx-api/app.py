@@ -750,10 +750,25 @@ async def _security_headers(request: Request, call_next):
 def _set_session_cookie(request: Request, resp, tok: str):
     # On *.ownpbx.org the cookie is shared across subdomains (portal sign-in
     # stays signed in on my); elsewhere it stays host-only, as before.
-    domain = OWNPBX_SUFFIX if _is_ownpbx_host(request) else None
+    if _is_ownpbx_host(request):
+        # Cross-subdomain SSO: the cookie must travel portal -> my on the
+        # redirect that follows the login POST. SameSite=Lax is withheld on
+        # that first redirect (the browser treats it as part of the POST),
+        # so the session only appeared after a manual refresh. SameSite=None
+        # + Secure is the standard fix for a cross-subdomain login redirect;
+        # ownpbx.org is always HTTPS (Cloudflare), so Secure is forced here.
+        # State-changing routes are CSRF-token protected, so relaxing
+        # SameSite is safe. Also clear any stale host-only cookie from
+        # before the split, so only the one domain cookie remains.
+        resp.set_cookie("pbx_session", "", httponly=True, samesite="lax",
+                        secure=False, max_age=0, domain=None)
+        resp.set_cookie("pbx_session", tok, httponly=True, samesite="none",
+                        secure=True, max_age=12 * 3600,
+                        domain=OWNPBX_SUFFIX)
+        return
     resp.set_cookie("pbx_session", tok, httponly=True, samesite="lax",
                     secure=is_https(request), max_age=12 * 3600,
-                    domain=domain)
+                    domain=None)
 
 
 # Login throttling (in memory; resets on restart):
