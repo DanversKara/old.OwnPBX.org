@@ -288,8 +288,7 @@ def callback(request: Request):
         M._audit_log(u["username"], "sso.link", f"linked to {who} at {c['issuer']}")
     M._log_signin(request, f"{u['username']} (single sign-on)", True)
     tok_s = M._new_session(u)
-    base = M._dashboard_base(request)
-    resp = RedirectResponse(pend.get("next") or (base + ("/" if u["role"] == "admin" else "/ucp")), status_code=302)
+    resp = RedirectResponse(M._after_login(request, u["role"], pend.get("next") or ""), status_code=302)
     M._set_session_cookie(request, resp, tok_s)
     resp.delete_cookie(STATE_COOKIE, path=CALLBACK)
     return resp

@@ -1094,7 +1094,9 @@ def app_connect(request: Request):
     esc = M.esc
     code = _new_pair_code(me["id"])
     M.ucp._audit(me, "app.pair_code", "browser sign-in")
-    server = M.request_base(request)
+    # On the service the app talks to my.ownpbx.org, whichever address this
+    # page was opened on; self-hosted: where this browser reached the panel.
+    server = M._dashboard_base(request) or M.request_base(request)
     link = pair_link(server, code) + (f"&st={st}" if st else "")
     intent = android_link(link)
     body = f"""<h2>Signed in</h2>

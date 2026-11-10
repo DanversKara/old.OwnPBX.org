@@ -660,7 +660,7 @@ MAX_BODY = 80 * 1024 * 1024    # up to 3 message videos of 25 MB each
 
 SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",                          # no clickjacking
-    "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
+    "Content-Security-Policy": "frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://billing.stripe.com",   # see _CSP_OWNPBX
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
 }
@@ -701,6 +701,23 @@ def _dashboard_base(request: Request) -> str:
     return "https://my.ownpbx.org" if _is_ownpbx_host(request) else ""
 
 
+def _after_login(request: Request, role: str, nxt: str = "") -> str:
+    """Where a fresh (or existing) sign-in goes: the safe 'next' page (the
+    app's connect page, /ucp/delete) or the dashboard, on my.ownpbx.org on
+    the service so the app and the browser end up on the same address."""
+    base = _dashboard_base(request)
+    nxt = sso_ui.next_param(nxt)
+    return base + (nxt or ("/" if role == "admin" else "/ucp"))
+
+
+# The login form posts to portal.ownpbx.org and is then redirected to
+# my.ownpbx.org. Browsers apply the CSP form-action list to that redirect
+# too, so with form-action 'self' alone the browser silently stopped on
+# /login (the session was already set, so a refresh "fixed" it).
+_CSP_BASE = "frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://billing.stripe.com"
+_CSP_OWNPBX = _CSP_BASE + " https://my.ownpbx.org https://portal.ownpbx.org"
+
+
 @app.middleware("http")
 async def _remote_guard(request: Request, call_next):
     _login_peer.set(request.client.host if request.client else "?")
@@ -708,8 +725,14 @@ async def _remote_guard(request: Request, call_next):
     # to portal.ownpbx.org to sign in; a signed-in visitor stays on my.
     if _req_host(request) == MY_HOST and not request.url.path.startswith(MY_PUBLIC_PREFIXES):
         if not _sess(request):
-            qs = request.url.query
-            return RedirectResponse(PORTAL_LOGIN + ("?" + qs if qs else ""), status_code=302)
+            path, qs = request.url.path, request.url.query
+            if path == "/login":            # keep ?out=1 / ?next=… as they are
+                return RedirectResponse(PORTAL_LOGIN + ("?" + qs if qs else ""), status_code=302)
+            # Come back to the page they asked for (the app's connect page,
+            # /ucp/delete) after signing in; anything else lands on the dashboard.
+            want = sso_ui.next_param(path + ("?" + qs if qs else ""))
+            return RedirectResponse(PORTAL_LOGIN + ("?" + urllib.parse.urlencode({"next": want}) if want else ""),
+                                    status_code=302)
     blocked = is_remote(request) and _get_setting("admin_remote") != "1"
     HIDE_ADMIN.set(blocked)
     _load_branding()
@@ -741,6 +764,8 @@ async def _security_headers(request: Request, call_next):
         return JSONResponse({"detail": "bad content-length"}, status_code=400)
     resp = await call_next(request)
     for k, v in SECURITY_HEADERS.items():
+        if k == "Content-Security-Policy" and _is_ownpbx_host(request):
+            v = _CSP_OWNPBX
         resp.headers.setdefault(k, v)
     if request.url.path.startswith(("/api/", "/ucp", "/login")) or request.url.path == "/":
         resp.headers.setdefault("Cache-Control", "no-store")
@@ -751,18 +776,16 @@ def _set_session_cookie(request: Request, resp, tok: str):
     # On *.ownpbx.org the cookie is shared across subdomains (portal sign-in
     # stays signed in on my); elsewhere it stays host-only, as before.
     if _is_ownpbx_host(request):
-        # Cross-subdomain SSO: the cookie must travel portal -> my on the
-        # redirect that follows the login POST. SameSite=Lax is withheld on
-        # that first redirect (the browser treats it as part of the POST),
-        # so the session only appeared after a manual refresh. SameSite=None
-        # + Secure is the standard fix for a cross-subdomain login redirect;
-        # ownpbx.org is always HTTPS (Cloudflare), so Secure is forced here.
-        # State-changing routes are CSRF-token protected, so relaxing
-        # SameSite is safe. Also clear any stale host-only cookie from
-        # before the split, so only the one domain cookie remains.
+        # Shared by portal. and my.ownpbx.org. They are the same *site*
+        # (ownpbx.org), so SameSite=Lax cookies do travel on the portal -> my
+        # redirect; the "stuck on /login" problem was the CSP form-action
+        # list (see _CSP_OWNPBX), not the cookie. Lax keeps the session off
+        # requests started by other sites. ownpbx.org is always HTTPS
+        # (Cloudflare), so Secure is forced. Also clear any stale host-only
+        # cookie from before the split, so only the one domain cookie remains.
         resp.set_cookie("pbx_session", "", httponly=True, samesite="lax",
                         secure=False, max_age=0, domain=None)
-        resp.set_cookie("pbx_session", tok, httponly=True, samesite="none",
+        resp.set_cookie("pbx_session", tok, httponly=True, samesite="lax",
                         secure=True, max_age=12 * 3600,
                         domain=OWNPBX_SUFFIX)
         return
@@ -882,8 +905,8 @@ def login_page(request: Request):
     # to the dashboard instead of showing a form that will only confuse.
     s = _sess(request)
     if s:
-        base = _dashboard_base(request)
-        return RedirectResponse(base + ("/" if s["role"] == "admin" else "/ucp"), status_code=302)
+        return RedirectResponse(_after_login(request, s["role"], request.query_params.get("next") or ""),
+                                status_code=302)
     if sso_ui.should_auto_redirect(request):
         nxt = sso_ui.next_param(request.query_params.get("next"))
         return RedirectResponse("/login/oidc" + ("?" + urllib.parse.urlencode({"next": nxt}) if nxt else ""),
@@ -906,9 +929,7 @@ def login_post(request: Request, username: str = Form(...), password: str = Form
         return HTMLResponse(page("Login", sso_ui.login_box(request, "Invalid credentials", True, next)), status_code=401)
     _log_signin(request, username, True)
     tok = _new_session(u)
-    base = _dashboard_base(request)
-    dest = sso_ui.next_param(next) or (base + ("/" if u["role"] == "admin" else "/ucp"))
-    resp = RedirectResponse(dest, status_code=302)
+    resp = RedirectResponse(_after_login(request, u["role"], next), status_code=302)
     _set_session_cookie(request, resp, tok)
     return resp
 
