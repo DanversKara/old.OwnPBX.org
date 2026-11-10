@@ -718,7 +718,9 @@ async def _remote_guard(request: Request, call_next):
         path = request.url.path
         if path == "/":
             s = _sess(request)
-            return RedirectResponse("/ucp" if s else "/login", status_code=302)
+            if not s:
+                return RedirectResponse("/login", status_code=302)
+            return RedirectResponse(_dashboard_base(request) + "/ucp", status_code=302)
         if not _remote_path_allowed(path):
             if path.startswith("/api/"):
                 return JSONResponse({"detail": "admin access is only available on the office network"},
@@ -902,8 +904,11 @@ def dashboard(request: Request):
     s = _sess(request)
     if not s:
         return RedirectResponse("/login")
+    base = _dashboard_base(request)
     if s["role"] != "admin":
-        return RedirectResponse("/ucp")
+        return RedirectResponse(base + "/ucp")
+    if base and _req_host(request) != MY_HOST:
+        return RedirectResponse(base + "/")
     # Thin consumer of the v1 JSON API (same endpoints external tools use).
     # Refreshes live every 10s; transient errors leave the last good state.
     body = """<h2>Dashboard</h2>
