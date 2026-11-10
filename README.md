@@ -804,9 +804,20 @@ the Notifications and Calling settings.*
 
 **Get it:** download the latest `my-phone-<version>.apk` from
 [Releases](https://github.com/DanversKara/OwnPBX.org/releases/latest) and open
-it on the phone (Google Play listing coming soon). The GitHub version tells
-you when there's an update; **Update** downloads it in the browser, then tap it
-to install. Play installs update through Play.
+it on the phone (each release lists its SHA-256 in `SHA256SUMS.txt`). The app
+is distributed on **GitHub only**, with **F-Droid** planned (see
+[docs/FDROID.md](docs/FDROID.md); the store listing lives in `fastlane/`); it
+is not on Google Play. The app tells you when there's an update; **Update**
+downloads it in the browser, then tap it to install. You can also follow the
+releases with [Obtainium](https://github.com/ImranR98/Obtainium).
+
+**Moving from the Google Play version:** a Play install can't update to the
+GitHub build (different signing), so uninstall it, install the GitHub `.apk`,
+and sign in again.
+
+**OwnPBX service users:** the app talks to `https://my.ownpbx.org` (the
+default). `portal.ownpbx.org` is only the web sign-in page; the old
+`myaccount.ownpbx.org` address switches over to `my.ownpbx.org` by itself.
 
 **Connect:** the easiest way is **Sign in with my browser** in the app: it
 opens My Phone in an in-app browser tab, you sign in there (password or single

@@ -767,7 +767,7 @@ def store_mode_section(s):
         f'aria-label="Hide in the web portal for {esc(u["username"])}"></td></tr>'
         for u in users) or '<tr><td colspan="3" class="muted">No users</td></tr>'
     return f"""<h3 id="store-mode">App store mode</h3>
-<p class="muted">For people using the My Phone app from Google Play (or another store), and for the test account you
+<p class="muted">For people using the My Phone app from an app store, and for the test account you
 give a store reviewer. <b>In the app</b>: no plan, usage, texts/minutes left, prices or "not in your plan" wording;
 anything unavailable just says "This isn't available on your account." <b>In the web portal</b> (second column): the
 Billing tab, "Your plan this month" and all plan wording are hidden too, and the Billing page sends them back to the

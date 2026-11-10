@@ -1,0 +1,3 @@
+• Works with the OwnPBX service's new addresses: sign in at my.ownpbx.org (old myaccount. and portal. addresses switch over by themselves)
+• "Sign in with my browser" works again
+• Now distributed on GitHub (and F-Droid later) instead of Google Play

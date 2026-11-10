@@ -94,9 +94,9 @@ class AppModel(val store: Store, context: android.content.Context) {
     }
 
     /**
-     * Open the offered update's .apk in the browser: it downloads there and the browser hands it to
-     * the system installer. (The app itself can't install packages: Google Play doesn't allow that
-     * permission, so the Play build and the GitHub build share one manifest without it.)
+     * Open the offered update's .apk (from GitHub Releases) in the browser: it downloads there and
+     * the browser hands it to the system installer. The app doesn't ask for permission to install
+     * packages itself, so the same build suits GitHub and F-Droid.
      */
     fun startUpdate(ctx: android.content.Context) {
         val offer = updateOffer ?: return

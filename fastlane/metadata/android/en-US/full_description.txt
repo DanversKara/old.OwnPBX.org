@@ -1,0 +1,17 @@
+<p>My Phone is the app for <b>OwnPBX</b>, free open-source software that turns a server you control into a private phone system. The app only talks to the PBX you sign in to: your calls, texts, voicemail and contacts stay on that server.</p>
+
+<p><b>What it does</b></p>
+<ul>
+<li>Calls between everyone on your PBX, encrypted, with a dial pad, call history, hold, mute, speaker and transfer</li>
+<li>Texts to other extensions, with emoji, photos, GIFs and videos, replies and forwarding</li>
+<li>Voicemail you can play in the app, and push-to-talk (walkie-talkie)</li>
+<li>Contacts with photos and online status (online, on a call, Do Not Disturb)</li>
+<li>Faxes, plan usage, and your panel's theme</li>
+<li>Sign in with your browser (password or single sign-on) or a pairing QR code</li>
+</ul>
+
+<p><b>Regular phone numbers</b>: calls and texts to the regular phone network, 911 and fax need a VoIP provider connected by whoever runs the PBX. Without one, the PBX works between its own users only.</p>
+
+<p><b>You need an OwnPBX server</b> to use this app: your own, or one you've been invited to. There's no sign-up in the app.</p>
+
+<p>No ads, no analytics, no tracking, no Google services. Free software under the GNU General Public License (GPL-2.0-or-later).</p>

@@ -929,10 +929,11 @@ fun SettingsScreen(model: AppModel, overview: Overview?, modifier: Modifier) {
                 Text("Free software (GPL-2.0-or-later). No ads, no tracking, no Google services.")
             },
         )
-        if (org.ownpbx.myphone.data.Updates.isPlayInstall(ctx)) {
+        val updatesFrom = org.ownpbx.myphone.data.Updates.storeName(ctx)
+        if (updatesFrom != null) {
             ListItem(
                 headlineContent = { Text("Updates") },
-                supportingContent = { Text("Delivered by Google Play") },
+                supportingContent = { Text("Delivered by $updatesFrom") },
             )
         } else {
             var updateCheck by remember { mutableStateOf(store.updateCheck) }

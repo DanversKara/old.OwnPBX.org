@@ -423,7 +423,24 @@ class Api(base: String, private val token: String?) {
             val scheme = u.substringBefore("://").lowercase()
             var host = u.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
             if (host.startsWith("origin-", true)) host = host.substring("origin-".length)
-            return "$scheme://$host"
+            return movedServer(host) ?: "$scheme://$host"
+        }
+
+        /**
+         * Addresses the OwnPBX service moved away from (or only signs in on), mapped to where the
+         * app talks to it now: portal.ownpbx.org is the web sign-in page, my.ownpbx.org the
+         * signed-in side, and the app always uses my. Null for any other server.
+         */
+        private val MOVED = mapOf(
+            "myphone.dox.box" to "https://my.ownpbx.org",
+            "myaccount.ownpbx.org" to "https://my.ownpbx.org",
+            "portal.ownpbx.org" to "https://my.ownpbx.org",
+        )
+
+        fun movedServer(server: String): String? {
+            val host = server.trim().removePrefix("https://").removePrefix("http://")
+                .substringBefore('/').substringBefore(':').lowercase()
+            return MOVED[host]
         }
     }
 

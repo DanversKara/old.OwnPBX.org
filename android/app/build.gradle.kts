@@ -7,7 +7,7 @@ plugins {
 
 // The one place the version lives. .github/workflows/android-auto-release.yml
 // edits this exact line, so keep it on a single line in this form.
-val APP_VERSION_NAME = "0.8.21"
+val APP_VERSION_NAME = "0.9.0"
 
 // versionCode is derived, never hand-maintained: 0.7.3 -> 703, 1.2.3 -> 10203.
 // Rebuilding any tag anywhere gives the same number.
@@ -29,6 +29,8 @@ android {
         val defaultServer = (project.findProperty("myphone.defaultServer") as String?).orEmpty()
             .replace("\\", "").replace("\"", "")
         buildConfigField("String", "DEFAULT_SERVER", "\"$defaultServer\"")
+        val updateCheck = (project.findProperty("myphone.updateCheck") as String?)?.trim() != "false"
+        buildConfigField("boolean", "UPDATE_CHECK", updateCheck.toString())
         // Phones only (keeps the APK smaller; Linphone ships native code per ABI).
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
