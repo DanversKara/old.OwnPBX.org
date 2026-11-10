@@ -1,5 +1,7 @@
 # Own PBX — Design (Asterisk core)
 
+> **OwnPBX is two things.** It is free, open-source software you run on your own server — it sends nothing back (no account, no telemetry, no phone-home; see [opensource.ownpbx.org](https://opensource.ownpbx.org)). It is also a private phone service at [ownpbx.org](https://ownpbx.org). The service's privacy, retention, and deletion policies describe what that service does with its users' data; they do not apply to the software itself or to anyone else's server. If you run your own server, you set those policies yourself.
+
 ## 1. Decision log
 
 - 2026-10-05: Engine = **Asterisk 22 LTS** (current LTS). Plain Asterisk with our own panel and call logic; no third-party GUI or module framework.
@@ -42,7 +44,7 @@
 
 See `db/schema.sql`. Tables: `logins`, `extensions`, `voicemail_boxes`, `voicemail_messages`, `trunks`, `inbound_routes`, `outbound_routes`, `recordings`, `cdr`, `messages`, `kv_settings`, `signins`, `audit`.
 
-Key rules carried over: per-login voicemail boxes (fallback mailbox in settings); admin recording flag is PBX-side only and never exposed to users; users toggle only their own `user_record`; CDR rows are soft-hidden per login with a 90-day retention lock (system CDR never touched).
+Key rules carried over: per-login voicemail boxes (fallback mailbox in settings); admin recording flag is PBX-side only and never exposed to users; users toggle only their own `user_record`; CDR rows are soft-hidden per login with a 90-day retention lock (system CDR never touched). (90 days is the ownpbx.org service's retention policy; the value is a default you can change on your own server.)
 
 ## 5. pbx-api routes (v1)
 
@@ -88,7 +90,7 @@ Reload strategy: endpoint/trunk changes -> `asterisk -rx "pjsip reload"` (non-di
 - **Phase 2:** Voicemail (record/play/MWI), recording admin/user split, *555 spy, conferences, DISA, feature codes.
 - **Phase 3:** Trunks + inbound DID routing + outbound routes.
 - **Phase 4:** Messages, live view, panel integration, /me self-service.
-- **Phase 5:** Billing, CVE checker, alerts, hardening, ISO/installer.
+- **Phase 5:** Billing (optional — the ownpbx.org service uses it for its customers; on your own server, you decide whether to take payments at all), CVE checker, alerts, hardening, ISO/installer.
 
 ## 10. Open questions (later)
 

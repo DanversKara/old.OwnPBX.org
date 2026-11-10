@@ -2,6 +2,8 @@
 
 *A self-hosted home/hobby phone system (Asterisk 22 + Kamailio). Published as-is for anyone curious; not actively supported. Forks welcome. Untested 911 - see below.*
 
+> **OwnPBX is two things.** It is free, open-source software you run on your own server — it does not send your data to us, to ownpbx.org, or to anyone else; there is no account, no telemetry, and no phone-home (see [opensource.ownpbx.org](https://opensource.ownpbx.org)). It is also a private phone service at [ownpbx.org](https://ownpbx.org), run for people we know. The service's privacy, retention, and deletion policies in this file describe what that service does with its users' data — they do not apply to the software itself or to anyone else's server. If you run your own server, you set those policies yourself; nothing leaves your server.
+
 A **home / hobby PBX**: a self-hosted phone system for enthusiasts who want to
 run their own phones at home and learn how it all works. Plain **Asterisk 22**
 does the calling, a small **Python** service makes every call decision, a clean
@@ -154,7 +156,9 @@ bonus credit when you deposit $15 or more, and we may get a credit too).
 **Plans / billing (optional, untested with real payments)**
 - Monthly plans through **Stripe**: outside minutes, voicemail, texts,
   recording and IVR menus per plan. Users without a plan can still call other
-  extensions.
+  extensions. (Billing is an optional feature. The ownpbx.org service uses it
+  for its customers; on your own server, you decide whether to take payments
+  at all — most home users don't need it.)
 
 ---
 
@@ -567,12 +571,14 @@ website, a footer notice (e.g. confidentiality) and the header line printed on
 every page; *Preview cover page* shows exactly what's sent. Tick *Let users use
 their own branding* and each user can set theirs under **My Phone → Faxes → My
 fax branding**. With nothing set the cover page is plain (no PBX name on it).
+(The ownpbx.org service sets its own fax branding. On your own server, you set
+yours.)
 
 **In the app:** a **Faxes** tab appears for anyone a fax number rings or who
 can send faxes: received and sent faxes, an in-app viewer (zoom, share, open in
 another app), a new-fax notification, and the send form above.
 
-### App store mode (Google Play)
+### App store mode
 **Billing → App store mode** (or *Logins → Edit → Hide plans & billing in the
 My Phone app*): for all users or the ones you tick, the app shows no plan,
 usage, texts/minutes left, prices or "not in your plan" wording. Settings shows
@@ -613,7 +619,9 @@ The **Recordings** page also holds the **recording settings** (see section 13).
 A public sign-up page at `https://<your panel>/store`: new customers pick a
 plan (and, optionally, a phone number from the ones you list for sale), then
 enter their card on **Stripe's own checkout page**. **Nobody is charged and
-nothing is created until you approve** the order on **Admin → Store**:
+nothing is created until you approve** the order on **Admin → Store**. (The
+ownpbx.org service uses the Store to take sign-ups from its customers. On your
+own server, you decide whether to open a Store at all.)
 
 - **Approve** charges the first month on the saved card (a declined card stops
   there, nothing is created), creates the login on the next free extension in
@@ -686,6 +694,9 @@ needs no sign-in), **Delete account now** (the same wipe as Logins → Delete)
 or **Decline** with a reason. Users get email receipts and confirmations; you
 get an email for each new request. Settings: a contact address shown to people
 who can't sign in, and optional automatic data downloads. Needs Email set up.
+(The 30-day copy and 90-day deletion deadlines are the ownpbx.org service's
+policy for its users. If you run your own server, you set your own deadlines;
+nothing leaves your server.)
 
 ### API Keys
 ![API keys](docs/screenshots/19-api-keys.png)
@@ -949,7 +960,10 @@ countries), and can break workplace or union rules.
 
 > Optional, and **not tested with real payments** - only use Stripe's test mode
 > unless you have tested it yourself. Most home users don't need billing at
-> all: just give people access under Billing → User access.
+> all: just give people access under Billing → User access. Billing is an
+> optional feature: the ownpbx.org service uses it to sell plans to its
+> customers. If you run your own server, you decide whether to use billing
+> at all.
 
 
 **What a plan sets:** monthly outside minutes, voicemail, texts per month,
@@ -1057,6 +1071,11 @@ often need the matching PBX side.
 ---
 
 ## 18. Maintenance and housekeeping
+
+The retention periods below are the ownpbx.org service's policy for its users
+(the 24-month hold on privacy-request records is the service's law-enforcement
+hold). If you run your own server, you set your own retention; nothing leaves
+your server.
 
 | Data | Kept for |
 |---|---|
