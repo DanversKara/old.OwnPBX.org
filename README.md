@@ -1,3 +1,5 @@
+# NOTICE THIS REPO HAS RUN ITS COURSE - We are moving to a Forked Voip we found. This Repo will not get any more updates.
+
 # own-pbx
 
 *A self-hosted home/hobby phone system (Asterisk 22 + Kamailio). Published as-is for anyone curious; not actively supported. Forks welcome. Untested 911 - see below.*
